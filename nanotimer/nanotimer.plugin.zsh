@@ -1,15 +1,12 @@
 #!/usr/bin/env zsh
 
-##==================================================================================================
-##== Prompt Timer Hook
-##==================================================================================================
-## Utilizes the 'preexec' and 'precmd' hooks. These are added to safely using 'add-zsh-hook' Zsh
-## autoloadable function. Timer is setup during 'preexec', and stopped at 'precmd'. This time
-## difference is extremely accurate, and is then displayed in the right prompt, down to nanoseconds.
+## nanotimer - Oh-My-Zsh plugin
+##
+## Utilizes the 'preexec' and 'precmd' hooks. Timer is setup during 'preexec', and stopped at
+## 'precmd'. This time difference is very accurate, and is displayed in the right prompt.
 ##
 ## More information about hooks like 'preexec' and 'precmd', and many others:
 ## https://zsh.sourceforge.io/Doc/Release/Functions.html#index-hook-functions
-##==================================================================================================
 
 ## * __exectimer_preexec()
 ## Executed just after a command has been read and is about to be executed. This hook is used to
