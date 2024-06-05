@@ -150,7 +150,7 @@ gpgverify() {
   fi
 
   # Check if the user needs help (also activated if no arguments are passed by 'help0' alias)
-  if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |[^-]-[a-zA-Z0-9]*h[a-zA-Z0-9]*)$' ]]; then
+  if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
     cat <<-EOF && return 0
     $funcstack[1] - Simple GPG verification convenience function.
 
@@ -296,7 +296,7 @@ gpgks() {
   local all=false     # Whether to list keyservers without numbering or format
   local quiet=false   # Whether to quietly only export KEYSERVER
 
-  if [[ $@ =~ '(^-h| -h|--help$|--help |[^-]-[a-zA-Z0-9]*h[a-zA-Z0-9]*)$' ]]; then
+  if [[ $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
     cat <<-EOF && return 0
       $funcstack[1] - Prints out a GPG keyserver address, from KEYSERVERS environment array.
       If called without arguments, it will print out all the options. See that
