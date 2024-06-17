@@ -1,11 +1,14 @@
 #!/usr/bin/env zsh
 
+# Name of the plugin.
+typeset -r _PLUGIN_NAME="gpghelpers"
+
 ##==============================================================================
 ##== Output Formatting & Convenience
 ##==============================================================================
 #region Output Formatting & Convenience
 
-## * _out_error
+## * _out_error()
 ## Prints an error including plugin name etc. to avoid confusion
 ##
 ## Usage: _out_error [PRINTF-FORMAT] ([ADDITIONAL-ARGS...])
@@ -39,8 +42,7 @@ _out_error() {
 				ADDITIONAL-ARGS
 					Arguments for the printf format specified above. This is optional; Only
 					the format can be passed for a simple message.
-
-EOF
+		EOF
 	fi
 
 	# Alls good; Output the error message.

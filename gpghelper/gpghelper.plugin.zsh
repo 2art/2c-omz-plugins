@@ -5,12 +5,6 @@
 ##==============================================================================
 #region Source Relevant Files
 
-# Name of the plugin.
-typeset -r _PLUGIN_NAME="gpghelpers"
-
-# Directory containing the main plugin script file.
-typeset -r _SCRIPT_DIR="${0:a:h}"
-
 # Additional scripts to load from same directory as the main plugin.
 declare -a _ADDITIONAL_SCRIPTS=(
 	common-functions.zsh
@@ -19,13 +13,11 @@ declare -a _ADDITIONAL_SCRIPTS=(
 
 # Loop and load all additional scripts.
 for sf in "${_ADDITIONAL_SCRIPTS[@]}"; do
-	local tgtfile="${_SCRIPT_DIR}/${sf}"
-	if [[ ! -e $tgtfile ]]; then
-		printf '\e[31;1m(%s) Unable to load plugin: Required script "%s" not found.\e[0m\n' "${_PLUGIN_NAME}" "$tgtfile" >&2
-		return 1
-	else
-		source "$tgtfile"
-	fi
+	local tgtfile="${0:a:h}/${sf}"
+	[[ ! -e $tgtfile ]] \
+    && printf '\e[31;1mPlugin "gpghelpers" load failed: Script "%s" not found.\e[0m\n' "$tgtfile" >&2 \
+    && return 1
+	source "$tgtfile"
 done
 
 #endregion

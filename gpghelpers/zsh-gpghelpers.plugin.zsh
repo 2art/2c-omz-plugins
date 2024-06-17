@@ -1,1 +1,0 @@
-gpghelpers.plugin.zsh
