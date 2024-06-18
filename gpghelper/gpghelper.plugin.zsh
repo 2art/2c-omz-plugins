@@ -45,12 +45,18 @@ alias gpgkeysl='gpg --list-public-keys --keyid-format long'
 alias gpgkeyssc='gpg --list-secret-keys --keyid-format short'
 alias gpgkeysscl='gpg --list-secret-keys --keyid-format long'
 
+## @ gpgverify, gpgkeyserver, gpgks
+## Quick aliases for the custom functions provided by this plugin.
+alias gpgverify='gpghelper-verify'
+alias gpgkeyserver='gpghelper-keyserver'
+alias gpgks='gpghelper-keyserver'
+
 #endregion
 
 ##======== Public Functions ====================================================
 #region Public Functions
 
-## * gpghelper_ks()
+## * gpghelper-keyserver()
 ## Prints out a GPG keyserver address, from GPGHELPER_KEYSERVERS environment
 ## array. If called without arguments, it will print out all the keyservers
 ## in a numbered list. These numbers are the ones to be used with this function
@@ -59,10 +65,10 @@ alias gpgkeysscl='gpg --list-secret-keys --keyid-format long'
 ##
 ## Usage:
 ##
-##   gpghelper_ks (-h|--help)  # Print this help information
-##   gpghelper_ks              # List keyservers and associated numbers
-##   gpghelper_ks [NUM]        # Select new keyserver for this session
-##   gpghelper_ks (-a|--all)   # Plain keyserver list appropriate for looping
+##   gpghelper-keyserver (-h|--help)  # Print this help information
+##   gpghelper-keyserver              # List keyservers and associated numbers
+##   gpghelper-keyserver [NUM]        # Select new keyserver for this session
+##   gpghelper-keyserver (-a|--all)   # Plain keyserver list appropriate for looping
 ##
 ##   Parameters:
 ##     -h, --help  Prints this help information.
@@ -72,7 +78,7 @@ alias gpgkeysscl='gpg --list-secret-keys --keyid-format long'
 ##                 available by calling the function with no arguments. If a
 ##                 number is provided, that keyserver is selected as the new
 ##                 default keyserver for this terminal session.
-gpghelper_ks() {
+gpghelper-keyserver() {
   # Check if -h|--help is passed to print help information and quit.
 	if [[ $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
 		cat <<-EOF && return 0
@@ -120,10 +126,10 @@ gpghelper_ks() {
   # Get the next command line argument, and expect it to be a number in range of
   # 1 to length of the keyservers array. If not, give errors.
   elif [[ ! $1 =~ '^-?[0-9]+$' ]]; then
-    _gpghelper_out_error "Invalid parameter '%s'." "$arg"
+    _gpghelper_print_error "Invalid parameter '%s'." "$arg"
     return 1
   elif (( $1 < 1 || $1 > $#GPGHELPER_KEYSERVERS )); then
-    _gpghelper_out_error "Number %d is out of range. Choose a value between 1 and %d." $arg ${#GPGHELPER_KEYSERVERS}
+    _gpghelper_print_error "Number %d is out of range. Choose a value between 1 and %d." $arg ${#GPGHELPER_KEYSERVERS}
     return 1
   else
 		export GPGHELPER_KEYSERVER="${GPGHELPER_KEYSERVERS[$1]}"
@@ -132,7 +138,7 @@ gpghelper_ks() {
   fi
 }
 
-## * gpghelper_verify()
+## * gpghelper-verify()
 ## Simple GPG verification convenience function.
 ##
 ## The function checks all relevant files that they exist and are readable, and
@@ -158,11 +164,11 @@ gpghelper_ks() {
 ##   without the extension. If the filename does NOT end in ".sig", the
 ##   function searches for a signature with same name and ".sig" extension.
 ##
-##     gpghelper_verify [FILE/SIG]                 # Provide only file or sig file; Auto-search the other
-##     gpghelper_verify [FILE] [SIG]               # Provide both, file and sig file
-##     gpghelper_verify [KEYSERVER] [FILE/SIG]     # Provide custom keyserver URL and find file/sig
-##     gpghelper_verify [KEYSERVER] [FILE] [SIG]   # Provide custom keyserver URL and both file and sig
-##     KEYSERVER=[URL] gpghelper_verify [OPTIONS]  # Alternatively use the KEYSERVER variable
+##     gpghelper-verify [FILE/SIG]                 # Provide only file or sig file; Auto-search the other
+##     gpghelper-verify [FILE] [SIG]               # Provide both, file and sig file
+##     gpghelper-verify [KEYSERVER] [FILE/SIG]     # Provide custom keyserver URL and find file/sig
+##     gpghelper-verify [KEYSERVER] [FILE] [SIG]   # Provide custom keyserver URL and both file and sig
+##     KEYSERVER=[URL] gpghelper-verify [OPTIONS]  # Alternatively use the KEYSERVER variable
 ##
 ##   FILE:
 ##     Path to a file to check; Must not have the extension ".sig", and must be
@@ -179,7 +185,7 @@ gpghelper_ks() {
 ##     Also, TCP Port 443 is just as unlikely to be blocked by a corporate
 ##     firewall as Port 80 (unlike Port 11371). For alternative options, see
 ##     the \${GPGHELPER_KEYSERVERS} array.
-gpghelper_verify() {
+gpghelper-verify() {
 	# Keyserver to use; Check GPGHELPER_KEYSERVER and KEYSERVER env vars
 	local keyserver="${GPGHELPER_KEYSERVER:-$_GPGHELPER_DEFAULT_KEYSERVER}"
 
@@ -195,7 +201,7 @@ gpghelper_verify() {
 		local keyserver="$1"
 		shift
 	elif [[ $1 =~ '^[a-zA-Z-]+://' ]]; then
-    _gpghelper_out_error "Keyserver URL is malformed (prefix): %s" "$1"
+    _gpghelper_print_error "Keyserver URL is malformed (prefix): %s" "$1"
 		return 1
 	fi
 
@@ -274,16 +280,16 @@ gpghelper_verify() {
 	# Ensure that both the file and signature file exist, and are both regular readable files.
 	for file in $tgtfile $sigfile; do
 		if [[ ! -e $file ]]; then
-      _gpghelper_out_error "File not found: %s" "$file"
+      _gpghelper_print_error "File not found: %s" "$file"
 			return 1
 		elif [[ ! -f $file ]]; then
-      _gpghelper_out_error "File is not a regular file: %s" "$file"
+      _gpghelper_print_error "File is not a regular file: %s" "$file"
 			return 1
 		elif [[ ! -r $file ]]; then
 			printf '\e[33;1mFile is unreadable: "%s"\n\tWould you like to read it using sudo? [Y/n]: \e[0m' "$file"
 			read -k1 yn; echo
 			if [[ $yn =~ '^[nN]$' ]]; then
-        _gpghelper_out_error "Cannot read file: %s" "$file"
+        _gpghelper_print_error "Cannot read file: %s" "$file"
 				return 1
 			else
 				sudo=true
@@ -305,10 +311,10 @@ gpghelper_verify() {
 ##======== Private Helper Functions ============================================
 #region Private Helper Functions
 
-## * _gpghelper_out_error()
+## * _gpghelper_print_error()
 ## Prints an error including plugin name etc. to avoid confusion
 ##
-## Usage: _gpghelper_out_error [PRINTF-FORMAT] ([ADDITIONAL-ARGS...])
+## Usage: _gpghelper_print_error [PRINTF-FORMAT] ([ADDITIONAL-ARGS...])
 ##
 ##   PRINTF-FORMAT:
 ##     Format for printf call; The message will be prefixed with red-colored
@@ -320,7 +326,7 @@ gpghelper_verify() {
 ##   ADDITIONAL-ARGS
 ##     Arguments for the printf format specified above. This is optional; Only
 ##     the format can be passed for a simple message.
-_gpghelper_out_error() {
+_gpghelper_print_error() {
 	# If -h|--help specified or no args provided, output help information.
 	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
 		cat <<-EOF && return 0
@@ -345,14 +351,14 @@ _gpghelper_out_error() {
 	printf '\e[31;1m(%s) Plugin error: \e[22m%s\e[0m\n' "${_GPGHELPER_PLUGIN_NAME}" "$(printf "${1}" ${@:2})" >&2
 }
 
-## * _gpghelper_print_query_question()
-## _gpghelper_print_query_question - Prints a formatted question for querying user input.
+## * _gpghelper_print_query()
+## _gpghelper_print_query - Prints a formatted question for querying user input.
 ##
-## Usage: _gpghelper_print_query_question [MESSAGE]
+## Usage: _gpghelper_print_query [MESSAGE]
 ##
 ## MESSAGE
 ## 	Header for the question, without colon.
-_gpghelper_print_query_question() {
+_gpghelper_print_query() {
 	# If -h|--help specified or no args provided, output help information.
 	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
 		cat <<-EOF && return 0
@@ -367,14 +373,14 @@ _gpghelper_print_query_question() {
 	printf '\e[0;32;1m%s: \e[0;32;2m' "$1"
 }
 
-## * _gpghelper_query_input()
-## _gpghelper_query_input - Query an input string from the user.
+## * _gpghelper_input_query()
+## _gpghelper_input_query - Query an input string from the user.
 ##
-## Usage: _gpghelper_query_input [-p|--password]
+## Usage: _gpghelper_input_query [-p|--password]
 ##
 ##   -p|--password
 ##     Query the user for a password; User input won't be visibly printed.
-_gpghelper_query_input() {
+_gpghelper_input_query() {
 	# If -h|--help specified or no args provided, output help information.
 	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
 		cat <<-EOF && return 0
@@ -398,17 +404,17 @@ _gpghelper_query_input() {
 	printf '%s\n' "$input"
 }
 
-## * _gpghelper_validate_input()
-## _gpghelper_validate_input - Query an input string from the user.
+## * _gpghelper_input_validate()
+## _gpghelper_input_validate - Query an input string from the user.
 ##
-## Usage: _gpghelper_validate_input [INPUT] [VALIDATION_TYPE]
+## Usage: _gpghelper_input_validate [INPUT] [VALIDATION_TYPE]
 ##
 ##   INPUT
 ##     Input string to validate.
 ##
 ##   VALIDATION_TYPE
 ##     Type to validate; Currently available: "name", "email".
-_gpghelper_validate_input() {
+_gpghelper_input_validate() {
 	# If -h|--help specified or no args provided, output help information.
 	if [[ $# -lt 2 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
 		cat <<-EOF && return 0
