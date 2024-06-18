@@ -1,39 +1,34 @@
 #!/usr/bin/env zsh
 
-##==============================================================================
-##== Configuration
-##==============================================================================
-#region Configuration
+##======== Configuration & Keyserver Variables =================================
+#region Configuration & Keyserver Variables
 
 # Name of the plugin.
 _GPGHELPER_PLUGIN_NAME="gpghelper"
 
 # Array for possible GPG keyservers that can be accessed later in any scenario
-_GPGHELPER_KEYSERVERS=(
-  hkps://hkps.pool.sks-keyservers.net:443
+GPGHELPER_KEYSERVERS=(
+	hkps://hkps.pool.sks-keyservers.net:443
 	hkps://keyserver.pgp.com:443
-  hkps://pgpkeys.eu:443
+	hkps://pgpkeys.eu:443
 	hkps://pgp.mit.edu:443
-  hkps://keys.openpgp.org:443
+	hkps://keys.openpgp.org:443
 	hkps://keyserver.ubuntu.com:443
-  hkps://pgp.mit.edu:443
 )
 
 # Default keyserver in case it's not specified somehow.
-_GPGHELPER_DEFAULT_KEYSERVER="${_GPGHELPER_KEYSERVERS[1]}"
+_GPGHELPER_DEFAULT_KEYSERVER="${GPGHELPER_KEYSERVERS[1]}"
 
 # Main keyserver to use in GPG aliases and functions.
-export _GPGHELPER_KEYSERVER="${_GPGHELPER_KEYSERVER:-$_GPGHELPER_DEFAULT_KEYSERVER}"
+export GPGHELPER_KEYSERVER="${GPGHELPER_KEYSERVER:-$_GPGHELPER_DEFAULT_KEYSERVER}"
 
 # More commonly named export for possible other uses
-export KEYSERVER="${_GPGHELPER_KEYSERVER}"
+export KEYSERVER="${GPGHELPER_KEYSERVER}"
 
 #endregion
 
-##==============================================================================
-##== GPG Aliases
-##==============================================================================
-#region GPG Aliases
+##======== Useful Aliases ======================================================
+#region Useful Aliases
 
 ## @ gpg
 ## Use default GPG keyserver every time it is called.
@@ -52,50 +47,263 @@ alias gpgkeysscl='gpg --list-secret-keys --keyid-format long'
 
 #endregion
 
-##==============================================================================
-##== Public User Functions
-##==============================================================================
-#region Helper Functions
+##======== Public Functions ====================================================
+#region Public Functions
 
-## * gpghelper_change_keyserver()
-## Lists available keyservers in array at top of file, and lets user select the
-## new keyserver to use this session.
-gpghelper_change_keyserver() {
-  printf '\e[32;1m0: \e[0;32;1;2m(Cancel)\e[0m\n'
-  local i=1
-  for addr in "${_GPGHELPER_KEYSERVERS[@]}"; do
-    printf '\e[32;1m%d: \e[0;32;1;2m%s\e[0m\n' $((i++)) "$addr"
-  done
-  printf '\n\e[32;1mWhich keyserver to use?: '
-  read num
-  printf '\e[0m'
-  if [[ ! $num =~ '^-?[0-9]+$' ]]; then
-    _gpghelper_out_error "Selection '%s' is not a number." "$num"
-    return 1
-  elif (($num == 0)); then
-    printf '\e[32;1mKeyserver remains as: \e[4m%s\e[0m\n' "${_GPGHELPER_KEYSERVER}"
+## * gpghelper_ks()
+## Prints out a GPG keyserver address, from GPGHELPER_KEYSERVERS environment
+## array. If called without arguments, it will print out all the keyservers
+## in a numbered list. These numbers are the ones to be used with this function
+## to select a specific keyserver for the session. The new keyserver will also
+## be exported to the GPGHELPER_KEYSERVER and KEYSERVER environment variables.
+##
+## Usage:
+##
+##   gpghelper_ks (-h|--help)  # Print this help information
+##   gpghelper_ks              # List keyservers and associated numbers
+##   gpghelper_ks [NUM]        # Select new keyserver for this session
+##   gpghelper_ks (-a|--all)   # Plain keyserver list appropriate for looping
+##
+##   Parameters:
+##     -h, --help  Prints this help information.
+##     -a, --all   Lists all keyservers line-by-line without any formatting or
+##                 numbers. This can be useful for looping, for example.
+##     NUM         Numerical value representing a keyserver from numbered list
+##                 available by calling the function with no arguments. If a
+##                 number is provided, that keyserver is selected as the new
+##                 default keyserver for this terminal session.
+gpghelper_ks() {
+  # Check if -h|--help is passed to print help information and quit.
+	if [[ $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
+		cat <<-EOF && return 0
+			$funcstack[1]
+
+      Prints out a GPG keyserver address, from GPGHELPER_KEYSERVERS environment
+      array. If called without arguments, it will print out all the keyservers
+      in a numbered list. These numbers are the ones to be used with this function
+      to select a specific keyserver for the session. The new keyserver will also
+      be exported to the GPGHELPER_KEYSERVER and KEYSERVER environment variables.
+
+			Usage:
+
+				$funcstack[1] (-h|--help)  # Print this help information
+				$funcstack[1]              # List keyservers and associated numbers
+				$funcstack[1] [NUM..]      # Select new keyserver for this session
+				$funcstack[1] (-a|--all)   # Plain keyserver list appropriate for looping
+
+			  Parameters:
+			  	-h, --help  Prints this help information.
+			  	-a, --all   Lists all keyservers line-by-line without any formatting or
+                      numbers. This can be useful for looping, for example.
+          NUM         Numerical value representing a keyserver from numbered list
+                      available by calling the function with no arguments. If a
+                      number is provided, that keyserver is selected as the new
+                      default keyserver for this terminal session.
+
+		EOF
+  # Check if no parameters, to print numbered keyserver list.
+	elif (( $# == 0 )); then
+		for i in $(seq 1 $#GPGHELPER_KEYSERVERS); do
+      if [[ ${GPGHELPER_KEYSERVERS[$i]} == ${GPGHELPER_KEYSERVER} ]]; then
+        printf '\e[32;1m%d: \e[2;4m%s\e[24m (Current)\e[0m\n' $i "${GPGHELPER_KEYSERVERS[$i]}"
+      else
+        printf '\e[32;1m%d: \e[2;4m%s\e[0m\n' $i "${GPGHELPER_KEYSERVERS[$i]}"
+      fi
+		done
     return 0
-  elif (($num < 0 || $num > ${#_GPGHELPER_KEYSERVERS})); then
-    _gpghelper_out_error "Selection '%d' is out of bounds." "$num"
+  # Check if -a|--all is passed, to print all keyservers without formatting, for looping.
+	elif [[ $@ =~ '(^-a| -a|--all$|--all |^-[[:alnum:]]*a| -[[:alnum:]]*a)' ]]; then
+    for server in "${GPGHELPER_KEYSERVERS[@]}"; do
+      printf '%s\n' "$server"
+    done
+    return 0
+  # Get the next command line argument, and expect it to be a number in range of
+  # 1 to length of the keyservers array. If not, give errors.
+  elif [[ ! $1 =~ '^-?[0-9]+$' ]]; then
+    _gpghelper_out_error "Invalid parameter '%s'." "$arg"
+    return 1
+  elif (( $1 < 1 || $1 > $#GPGHELPER_KEYSERVERS )); then
+    _gpghelper_out_error "Number %d is out of range. Choose a value between 1 and %d." $arg ${#GPGHELPER_KEYSERVERS}
     return 1
   else
-    export _GPGHELPER_KEYSERVER="${_GPGHELPER_KEYSERVERS[$num]}"
-    export KEYSERVER="${_GPGHELPER_KEYSERVERS[$num]}"
-    printf '\e[32;1mNew keyserver for session: \e[4m%s\e[0m\n' "${_GPGHELPER_KEYSERVER}"
+		export GPGHELPER_KEYSERVER="${GPGHELPER_KEYSERVERS[$1]}"
+		export KEYSERVER="${GPGHELPER_KEYSERVERS[$1]}"
+		printf '\e[32;1mNew keyserver for session: \e[2;4m%s\e[0m\n' "${GPGHELPER_KEYSERVER}"
   fi
 }
 
-## * gpghelper_get_keyserver()
-## Prints the keyserver that's currently active in this session.
-gpghelper_get_keyserver() {
-  printf '%s\n' "${_GPGHELPER_KEYSERVER}"
+## * gpghelper_verify()
+## gpghelper_verify - Simple GPG verification convenience function.
+##
+## The function checks all relevant files that they exist and are readable, and
+## that there are no other problem. It uses the keyserver specified in the
+## KEYSERVER environment variable (see .zshenv). If this is unset/unavailable,
+## the following keyserver is used by default:
+##
+##   ${_GPGHELPER_DEFAULT_KEYSERVER}
+##
+## You can provide a keyserver URL and possibly port manually as the first
+## argument. This will override the environment variable and the above default.
+## The first parameter is checked for a match with URL regex pattern. It should
+## start with either "http(s)://" or "hkp(s)://".
+##
+## For the GPG verification, it effectively just runs the following command:
+##
+##   gpg --keyserver [KEYSERVER] \
+##       --keyserver-options auto-key-retrieve \
+##       --verify [FILE] [SIG]
+##
+## Usage:
+##
+##   When providing a single file, if that file's extension is ".sig", then
+##   the function automatically searches for a file with the same name but
+##   without the extension. If the filename does NOT end in ".sig", the
+##   function searches for a signature with same name and ".sig" extension.
+##
+##     gpghelper_verify [FILE/SIG]                 # Provide only file or sig file; Auto-search the other
+##     gpghelper_verify [FILE] [SIG]               # Provide both, file and sig file
+##     gpghelper_verify [KEYSERVER] [FILE/SIG]     # Provide custom keyserver URL and find file/sig
+##     gpghelper_verify [KEYSERVER] [FILE] [SIG]   # Provide custom keyserver URL and both file and sig
+##     KEYSERVER=[URL] gpghelper_verify [OPTIONS]  # Alternatively use the KEYSERVER variable
+##
+##   FILE:
+##     Path to a file to check; Must not have the extension ".sig", and must be
+##     a regular readable file.
+##
+##   SIG:
+##     Path to the relevant signature file, with ".sig" extension.
+##
+##   KEYSERVER:
+##     Custom keyserver URL and optionally port (separated from URL by a colon)
+##     to use instead of the one specified in KEYSERVER variable, or the default
+##     of "hkps://hkps.pool.sks-keyservers.net:443". For alternative options, see
+##     the \${GPGHELPER_KEYSERVERS} array.
+gpghelper_verify() {
+	# Keyserver to use; Check GPGHELPER_KEYSERVER and KEYSERVER env vars
+	local keyserver="${GPGHELPER_KEYSERVER:-$_GPGHELPER_DEFAULT_KEYSERVER}"
+
+	local tgtfile=    # Target file name
+	local tgtsig=     # Target signature file for above file
+	local sudo=false  # If sudo is needed to read an unreadable file
+
+	# Check if first argument is an URL to override the keyserver. First check for a prefix of http(s)
+	# or hkp(s). If not present, check if it's in an URL form otherwise. Do this before checking if
+	# help should be output, as if a keyserver is passed, arguments are shifted, and so if it's the
+	# only parameter, help is shown.
+	if [[ $1 =~ '(https?|hkps?|ftp|file)://' ]]; then
+		local keyserver="$1"
+		shift
+	elif [[ $1 =~ '^[a-zA-Z-]+://' ]]; then
+    _gpghelper_out_error "Keyserver URL is malformed (prefix): %s" "$1"
+		return 1
+	fi
+
+	# Check if the user needs help (also activated if no arguments are passed by 'help0' alias)
+	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
+		cat <<-EOF && return 0
+		$funcstack[1] - Simple GPG verification convenience function.
+
+		The function checks all relevant files that they exist and are readable, and
+		that there are no other problem. It uses the keyserver specified in the
+		KEYSERVER environment variable (see .zshenv). If this is unset/unavailable,
+		the following keyserver is used by default:
+
+			${_GPGHELPER_DEFAULT_KEYSERVER}
+
+		You can provide a keyserver URL and possibly port manually as the first
+		argument. This will override the environment variable and the above default.
+		The first parameter is checked for a match with URL regex pattern. It should
+		start with either "http(s)://" or "hkp(s)://".
+
+		For the GPG verification, it effectively just runs the following command:
+
+			gpg --keyserver [KEYSERVER] \
+					--keyserver-options auto-key-retrieve \
+					--verify [FILE] [SIG]
+
+		Usage:
+
+			When providing a single file, if that file's extension is ".sig", then
+			the function automatically searches for a file with the same name but
+			without the extension. If the filename does NOT end in ".sig", the
+			function searches for a signature with same name and ".sig" extension.
+
+				$funcstack[1] [FILE/SIG]                # Provide only file or sig file; Auto-search the other
+				$funcstack[1] [FILE] [SIG]              # Provide both, file and sig file
+				$funcstack[1] [KEYSERVER] [FILE/SIG]    # Provide custom keyserver URL and find file/sig
+				$funcstack[1] [KEYSERVER] [FILE] [SIG]  # Provide custom keyserver URL and both file and sig
+				KEYSERVER=[URL] $funcstack[1] [OPTIONS] # Alternatively use the KEYSERVER variable
+
+			FILE:
+				Path to a file to check; Must not have the extension ".sig", and must be
+				a regular readable file.
+
+			SIG:
+				Path to the relevant signature file, with ".sig" extension.
+
+			KEYSERVER:
+				Custom keyserver URL and optionally port (separated from URL by a colon)
+				to use instead of the one specified in KEYSERVER environment variable.
+				Recommended to always use HKPS (HKP over TLS) - This encrypts the
+				connection to the keyserver and helps prevent man-in-the-middle attacks.
+				Also, TCP Port 443 is just as unlikely to be blocked by a corporate
+				firewall as Port 80 (unlike Port 11371). For alternative options, see
+				the \${GPGHELPER_KEYSERVERS} array.
+		EOF
+	fi
+
+	# Check arguments and determine target file and it's signature file.
+	if (( $# >= 2 )); then
+		# Two arguments provided; First argument is the file, while second is for the signature file.
+		tgtfile="$1"
+		tgtsig="$2"
+	elif [[ $1 == *.sig ]]; then
+		# Only argument ends in .sig; Assuming this is the signarure file. Stripping the .sig
+		# extension out for the target filename.
+		tgtfile="${1%.sig}"
+		tgtsig="$1"
+	else
+		# Only argument does not end in .sig; Assuming it is a filename and setting tgtsig to the
+		# same name with .sig extension prepended to it.
+		tgtfile="$1"
+		tgtsig="$1.sig"
+	fi
+
+	# Begin operation; Print the file, signature and keyserver used.
+	printf '\e[34;1mChecking file: \e[3;4m%s\n\e[23;24mSignature file: \e[3;4m%s\n\e[23;24mKeyserver: \e[3;4m%s\e[0m\n\n' "$tgtfile" "$tgtsig" "$keyserver"
+
+	# Ensure that both the file and signature file exist, and are both regular readable files.
+	for file in $tgtfile $sigfile; do
+		if [[ ! -e $file ]]; then
+      _gpghelper_out_error "File not found: %s" "$file"
+			return 1
+		elif [[ ! -f $file ]]; then
+      _gpghelper_out_error "File is not a regular file: %s" "$file"
+			return 1
+		elif [[ ! -r $file ]]; then
+			printf '\e[33;1mFile is unreadable: "%s"\n\tWould you like to read it using sudo? [Y/n]: \e[0m' "$file"
+			read -k1 yn; echo
+			if [[ $yn =~ '^[nN]$' ]]; then
+        _gpghelper_out_error "Cannot read file: %s" "$file"
+				return 1
+			else
+				sudo=true
+			fi
+		fi
+	done
+
+	# All seems to be in order; Notify and verify the signature.
+	printf '\e[34;1mVerifying file..\e[0m\n'
+	if $sudo; then
+		sudo gpg --keyserver-options auto-key-retrieve --verify "$tgtsig" "$tgtfile"
+	else
+		gpg --keyserver-options auto-key-retrieve --verify "$tgtsig" "$tgtfile"
+	fi
 }
 
 #endregion
 
-##==============================================================================
-##== Private Helper Functions
-##==============================================================================
+##======== Private Helper Functions ============================================
 #region Private Helper Functions
 
 ## * _gpghelper_out_error()
@@ -113,7 +321,6 @@ gpghelper_get_keyserver() {
 ##   ADDITIONAL-ARGS
 ##     Arguments for the printf format specified above. This is optional; Only
 ##     the format can be passed for a simple message.
-##
 _gpghelper_out_error() {
 	# If -h|--help specified or no args provided, output help information.
 	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
@@ -137,6 +344,111 @@ _gpghelper_out_error() {
 
 	# Alls good; Output the error message.
 	printf '\e[31;1m(%s) Plugin error: \e[22m%s\e[0m\n' "${_GPGHELPER_PLUGIN_NAME}" "$(printf "${1}" ${@:2})" >&2
+}
+
+## * _gpghelper_print_query_question()
+## _gpghelper_print_query_question - Prints a formatted question for querying user input.
+##
+## Usage: _gpghelper_print_query_question [MESSAGE]
+##
+## MESSAGE
+## 	Header for the question, without colon.
+_gpghelper_print_query_question() {
+	# If -h|--help specified or no args provided, output help information.
+	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
+		cat <<-EOF && return 0
+			$funcstack[1] - Prints a formatted question for querying user input.
+
+			Usage: $funcstack[1] [MESSAGE]
+
+			MESSAGE
+				Header for the question, without colon.
+		EOF
+	fi
+	printf '\e[0;32;1m%s: \e[0;32;2m' "$1"
+}
+
+## * _gpghelper_query_input()
+## _gpghelper_query_input - Query an input string from the user.
+##
+## Usage: _gpghelper_query_input [-p|--password]
+##
+##   -p|--password
+##     Query the user for a password; User input won't be visibly printed.
+_gpghelper_query_input() {
+	# If -h|--help specified or no args provided, output help information.
+	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
+		cat <<-EOF && return 0
+			$funcstack[1] - Query an input string from the user.
+
+			Usage: $funcstack[1] [-p|--password]
+
+				-p|--password
+					Query the user for a password; User input won't be visibly printed.
+		EOF
+	# Check for -p|--password
+	elif [[ $@ =~ '(^-p| -p|--password$|--password |^-[[:alnum:]]*p| -[[:alnum:]]*p)' ]]; then
+		# Read password
+		read -s input
+	else
+		# Read normal input
+		read input
+	fi
+
+	# Done; Print the result
+	printf '%s\n' "$input"
+}
+
+## * _gpghelper_validate_input()
+## _gpghelper_validate_input - Query an input string from the user.
+##
+## Usage: _gpghelper_validate_input [INPUT] [VALIDATION_TYPE]
+##
+##   INPUT
+##     Input string to validate.
+##
+##   VALIDATION_TYPE
+##     Type to validate; Currently available: "name", "email".
+_gpghelper_validate_input() {
+	# If -h|--help specified or no args provided, output help information.
+	if [[ $# -lt 2 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]; then
+		cat <<-EOF && return 0
+			$funcstack[1] - Query an input string from the user.
+
+			Usage: $funcstack[1] [INPUT] [VALIDATION_TYPE]
+
+				INPUT
+					Input string to validate.
+
+				VALIDATION_TYPE
+					Type to validate; Currently available: "name", "email".
+		EOF
+	fi
+
+	local input="$1" # Get input from first argument.
+	local valtype="$2" # Get validation type from second argument.
+
+	# Ensure validation type value is valid.
+	if [[ $valtype == 'email' ]]; then
+		# Check that input is a valid email.
+		if echo $input | pcre2grep '^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$' | read input_checked; then
+			return 0
+		else
+			printf "\e[31;1mError: Invalid email "%s". (Matched against: \$'^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\$').\e[0m\n" "$input" >&2
+			return 1
+		fi
+	elif [[ $valtype == 'name' ]]; then
+		# Check that input is a valid name.
+		if echo $input | pcre2grep $'^[A-Z][a-zA-Z \'.-]*((?![0-9])[^-])$' | read input_checked; then
+			return 0
+		else
+			printf "\e[31;1mError: Invalid name "%s" (Matched against: \$'^[A-Z][a-zA-Z \'.-]*((?![0-9])[^-])$').\e[0m\n" "$input" >&2
+			return 1
+		fi
+	else
+		printf '\e[31;1mError in _validate_input(): validation type value "%s" is invalid; Must be "name" or "email".\e[0m\n' "$valtype" >&2
+		return 1
+	fi
 }
 
 #endregion
