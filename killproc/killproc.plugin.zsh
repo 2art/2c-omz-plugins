@@ -86,7 +86,7 @@ killproc() {
 	# If -h|--help specified or no args provided, output help information.
 	if [[ $# -eq 0 || $@ =~ '(^-h| -h|--help$|--help |^-[[:alnum:]]*h| -[[:alnum:]]*h)' ]]
 	then
-		cat <<-EOF | sed -E 's|\\ |\t|g' && return 0
+		cat <<-EOF | sed -E 's/\| /\t/g' && return 0
 		$funcstack[1] - Kills all processes by process name.
 
     Kills all processes by specified name, and optionally limiting to processes
@@ -97,49 +97,49 @@ killproc() {
 
 		USAGE:
 
-		\ $funcstack[1] (-h|--help) [PROCESS_NAME] ([UID]) ([SIGNALS..])
+		| $funcstack[1] (-h|--help) [PROCESS_NAME] ([UID]) ([SIGNALS..])
 
 		PARAMETERS:
 
-		\ [PROCESS_NAME]
+		| [PROCESS_NAME]
 
-		\ \ Name of the process for searching PIDs with ´pgrep´. All processes by
-		\ \ this command name are searched and processed. NOTE: Command line
-		\ \ matching is not yet supported, only process command name.
+		| | Name of the process for searching PIDs with ´pgrep´. All processes by
+		| | this command name are searched and processed. NOTE: Command line
+		| | matching is not yet supported, only process command name.
 
-		\ [UID]
+		| [UID]
 
-		\ \ Optional user ID for ´pgrep -u UID -x PROCESS_NAME´. If not provided,
-		\ \ processes of every user are searched.
+		| | Optional user ID for ´pgrep -u UID -x PROCESS_NAME´. If not provided,
+		| | processes of every user are searched.
 
-		\ [SIGNALS..]
+		| [SIGNALS..]
 
-		\ \ Optional string containing signals to send to found processes, with
-		\ \ values separated by comma. Don't prefix the signal with SIG-, only
-		\ \ include the main signal name. Signals can also be excluded by passing
-		\ \ a minus before the signal. Note that if any signal in the input list
-		\ \ has a minus sign, all signals listed must have one aswell.
+		| | Optional string containing signals to send to found processes, with
+		| | values separated by comma. Don't prefix the signal with SIG-, only
+		| | include the main signal name. Signals can also be excluded by passing
+		| | a minus before the signal. Note that if any signal in the input list
+		| | has a minus sign, all signals listed must have one aswell.
 
-		\ \ Basically, this parameter can only be used to specify custom list of
-		\ \ signals, or to exclude signals from the default set.
+		| | Basically, this parameter can only be used to specify custom list of
+		| | signals, or to exclude signals from the default set.
 
-		\ \ By default, this value looks like: "KILL,TERM,HUP,QUIT"
-		\ \ Example value to skipping KILL:    "TERM,HUP,QUIT"
-		\ \ Example value to exclude KILL/HUP: "-KILL,-HUP"
+		| | By default, this value looks like: "KILL,TERM,HUP,QUIT"
+		| | Example value to skipping KILL:    "TERM,HUP,QUIT"
+		| | Example value to exclude KILL/HUP: "-KILL,-HUP"
 
 		EXAMPLES:
 
-		\ \ # Show help information
-		\ \ $funcstack[1] -h|--help
+		| | # Show help information
+		| | $funcstack[1] -h|--help
 
-		\ \ # Kill polybar process owned by cur user, with signals KILL,QUIT,INT
-		\ \ $funcstack[1] polybar $UID KILL,QUIT,INT
+		| | # Kill polybar process owned by cur user, with signals KILL,QUIT,INT
+		| | $funcstack[1] polybar $UID KILL,QUIT,INT
 
-		\ \ # Kill processes named "sysprocess" and owned by UID 0 (root)
-		\ \ $funcstack[1] sysprocess 0 KILL
+		| | # Kill processes named "sysprocess" and owned by UID 0 (root)
+		| | $funcstack[1] sysprocess 0 KILL
 
-		\ \ # Try to kill all instances of 'someprog' with only KILL+TERM signals
-		\ \ $funcstack[1] someprog -HUP,-QUIT
+		| | # Try to kill all instances of 'someprog' with only KILL+TERM signals
+		| | $funcstack[1] someprog -HUP,-QUIT
 		EOF
 	fi
 
